@@ -12,12 +12,8 @@ class ProfileController extends Controller
     // Menampilkan profil
     public function show()
     {
-        $user = Auth::user();
-        $anggota = null;
-        if ($user->role == 'anggota') {
-            $anggota = Anggota::where('nim', $user->nim)->first();
-        }
-        return view('profile.show', compact('user', 'anggota'));
+        $user = Auth::user(); // Ambil data user yang login
+        return view('profile.show', compact('user'));
     }
 
     // Form edit profil
