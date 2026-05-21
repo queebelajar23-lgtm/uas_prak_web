@@ -50,13 +50,12 @@ class DashboardController extends Controller
         // Untuk anggota: riwayat peminjaman sendiri
         $riwayatPinjaman = null;
         if ($user->role == 'anggota') {
-            $anggota = Anggota::where('nim', $user->nim)->first();
-            if ($anggota) {
-                $riwayatPinjaman = Peminjaman::where('id_anggota', $anggota->id_anggota)
-                    ->with('detailPeminjaman.buku')
-                    ->orderBy('created_at', 'desc')
-                    ->get();
-            }
+            $bukus = Buku::with('kategori')->get(); // ambil semua buku
+            return view('dashboard', compact(
+                'totalBuku', 'totalAnggota', 'totalPeminjaman', 'peminjamanAktif',
+                'totalStokBuku', 'totalBukuDipinjam', 'anggotaAktif', 'totalDenda',
+                'belumBayarDenda', 'bukuTerpopuler', 'riwayatPinjaman', 'user', 'bukus'
+            ));
         }
         
         return view('dashboard', compact(

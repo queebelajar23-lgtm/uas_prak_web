@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Buku;
 use App\Models\Anggota;
+use App\Models\Kategori;
 use App\Models\Peminjaman;
 use App\Models\DetailPeminjaman;
 use Illuminate\Http\Request;
@@ -12,8 +13,48 @@ use Illuminate\Support\Facades\DB;
 
 class PeminjamanController extends Controller
 {
-    // ============ UNTUK ADMIN & PETUGAS ============
-    
+    // ============================================================
+    // KATALOG BUKU — untuk anggota
+    // ============================================================
+
+    /**
+     * Halaman katalog buku dengan card + filter
+     * Route: GET /katalog
+     */
+    public function katalog(Request $request)
+    {
+        $query = Buku::with('kategori');
+
+        // Filter pencarian judul / penulis
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('judul_buku', 'like', '%' . $request->search . '%')
+                  ->orWhere('penulis',   'like', '%' . $request->search . '%');
+            });
+        }
+
+        // Filter kategori
+        if ($request->filled('kategori_id')) {
+            $query->where('kategori_id', $request->kategori_id);
+        }
+
+        // Filter ketersediaan stok
+        if ($request->tersedia === '1') {
+            $query->where('stok', '>', 0);
+        } elseif ($request->tersedia === '0') {
+            $query->where('stok', 0);
+        }
+
+        $bukus     = $query->orderBy('judul_buku')->paginate(12);
+        $kategoris = Kategori::orderBy('nama_kategori')->get();
+
+        return view('peminjaman.katalog', compact('bukus', 'kategoris'));
+    }
+
+    // ============================================================
+    // ADMIN & PETUGAS
+    // ============================================================
+
     public function index()
     {
         $peminjamans = Peminjaman::with(['anggota', 'user', 'detailPeminjaman.buku'])
@@ -25,44 +66,43 @@ class PeminjamanController extends Controller
     public function create()
     {
         $anggotas = Anggota::all();
-        $bukus = Buku::where('stok', '>', 0)->get();
+        $bukus    = Buku::where('stok', '>', 0)->get();
         return view('peminjaman.create', compact('anggotas', 'bukus'));
     }
 
     public function store(Request $request)
     {
         $request->validate([
-            'id_anggota' => 'required|exists:anggotas,id_anggota',
-            'id_buku' => 'required|array',
-            'id_buku.*' => 'exists:bukus,id_buku',
-            'tanggal_kembali_rencana' => 'required|date|after:today',
+            'id_anggota'               => 'required|exists:anggotas,id_anggota',
+            'id_buku'                  => 'required|array|min:1',
+            'id_buku.*'                => 'exists:bukus,id_buku',
+            'tanggal_kembali_rencana'  => 'required|date|after:today',
         ]);
 
         DB::beginTransaction();
         try {
             $peminjaman = Peminjaman::create([
-                'id_anggota' => $request->id_anggota,
-                'id_user' => Auth::id(),
-                'tanggal_pinjam' => now(),
+                'id_anggota'              => $request->id_anggota,
+                'id_user'                 => Auth::id(),
+                'tanggal_pinjam'          => now(),
                 'tanggal_kembali_rencana' => $request->tanggal_kembali_rencana,
-                'status' => 'dipinjam',
-                'status_pengajuan' => 'disetujui',
+                'status'                  => 'dipinjam',
+                'status_pengajuan'        => 'disetujui',
             ]);
 
             foreach ($request->id_buku as $id_buku) {
                 DetailPeminjaman::create([
                     'id_peminjaman' => $peminjaman->id_peminjaman,
-                    'id_buku' => $id_buku,
-                    'jumlah' => 1,
+                    'id_buku'       => $id_buku,
+                    'jumlah'        => 1,
                 ]);
 
-                $buku = Buku::find($id_buku);
-                $buku->stok -= 1;
-                $buku->save();
+                Buku::find($id_buku)->decrement('stok');
             }
 
             DB::commit();
-            return redirect()->route('peminjaman.index')->with('success', 'Peminjaman berhasil ditambahkan');
+            return redirect()->route('peminjaman.index')
+                             ->with('success', 'Peminjaman berhasil ditambahkan.');
         } catch (\Exception $e) {
             DB::rollback();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
@@ -71,38 +111,37 @@ class PeminjamanController extends Controller
 
     public function show($id)
     {
-        $peminjaman = Peminjaman::with(['anggota', 'user', 'detailPeminjaman.buku'])->findOrFail($id);
+        $peminjaman = Peminjaman::with(['anggota', 'user', 'detailPeminjaman.buku'])
+                                ->findOrFail($id);
         return view('peminjaman.show', compact('peminjaman'));
     }
 
     public function pengembalian($id)
     {
         $peminjaman = Peminjaman::with('detailPeminjaman.buku')->findOrFail($id);
-        
-        if ($peminjaman->status == 'kembali') {
-            return redirect()->back()->with('error', 'Buku sudah dikembalikan');
+
+        if ($peminjaman->status === 'kembali') {
+            return redirect()->back()->with('error', 'Buku sudah dikembalikan.');
         }
 
         DB::beginTransaction();
         try {
-            $tanggal_kembali = now();
-            $terlambat_hari = max(0, now()->diffInDays($peminjaman->tanggal_kembali_rencana));
-            $denda = $terlambat_hari > 0 ? $terlambat_hari * 1000 : 0;
+            $terlambat_hari = max(0, now()->diffInDays($peminjaman->tanggal_kembali_rencana, false) * -1);
+            $denda          = $terlambat_hari > 0 ? $terlambat_hari * 1000 : 0;
 
             $peminjaman->update([
-                'tanggal_kembali_aktual' => $tanggal_kembali,
-                'status' => 'kembali',
-                'denda' => $denda,
+                'tanggal_kembali_aktual' => now(),
+                'status'                 => 'kembali',
+                'denda'                  => $denda,
             ]);
 
             foreach ($peminjaman->detailPeminjaman as $detail) {
-                $buku = Buku::find($detail->id_buku);
-                $buku->stok += $detail->jumlah;
-                $buku->save();
+                Buku::find($detail->id_buku)->increment('stok', $detail->jumlah);
             }
 
             DB::commit();
-            return redirect()->route('peminjaman.index')->with('success', 'Pengembalian berhasil. Denda: Rp ' . number_format($denda, 0, ',', '.'));
+            return redirect()->route('peminjaman.index')
+                             ->with('success', 'Pengembalian berhasil. Denda: Rp ' . number_format($denda, 0, ',', '.'));
         } catch (\Exception $e) {
             DB::rollback();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
@@ -112,15 +151,18 @@ class PeminjamanController extends Controller
     public function destroy($id)
     {
         $peminjaman = Peminjaman::findOrFail($id);
-        if ($peminjaman->status == 'dipinjam') {
-            return redirect()->back()->with('error', 'Hapus peminjaman yang sedang aktif tidak diperbolehkan');
+
+        if ($peminjaman->status === 'dipinjam') {
+            return redirect()->back()
+                             ->with('error', 'Tidak dapat menghapus peminjaman yang masih aktif.');
         }
+
         $peminjaman->delete();
-        return redirect()->route('peminjaman.index')->with('success', 'Data peminjaman dihapus');
+        return redirect()->route('peminjaman.index')->with('success', 'Data peminjaman dihapus.');
     }
 
-    // ============ UNTUK PERSETUJUAN PETUGAS ============
-    
+    // ── Persetujuan ────────────────────────────────────────────
+
     public function pending()
     {
         $peminjamans = Peminjaman::where('status_pengajuan', 'menunggu')
@@ -135,18 +177,16 @@ class PeminjamanController extends Controller
         DB::beginTransaction();
         try {
             $peminjaman = Peminjaman::with('detailPeminjaman.buku')->findOrFail($id);
-            
+
             $peminjaman->update([
-                'id_user' => Auth::id(),
-                'tanggal_pinjam' => now(),
-                'status' => 'dipinjam',
+                'id_user'          => Auth::id(),
+                'tanggal_pinjam'   => now(),
+                'status'           => 'dipinjam',
                 'status_pengajuan' => 'disetujui',
             ]);
 
             foreach ($peminjaman->detailPeminjaman as $detail) {
-                $buku = Buku::find($detail->id_buku);
-                $buku->stok -= $detail->jumlah;
-                $buku->save();
+                Buku::find($detail->id_buku)->decrement('stok', $detail->jumlah);
             }
 
             DB::commit();
@@ -162,55 +202,77 @@ class PeminjamanController extends Controller
         $peminjaman = Peminjaman::findOrFail($id);
         $peminjaman->update([
             'status_pengajuan' => 'ditolak',
-            'status' => 'ditolak',
+            'status'           => 'ditolak',
         ]);
-        
+
         return redirect()->route('peminjaman.pending')->with('success', 'Peminjaman ditolak.');
     }
 
-    // ============ UNTUK ANGGOTA (PENGAJUAN) ============
-    
-    public function createAnggota()
+    // ============================================================
+    // ANGGOTA — Pengajuan mandiri
+    // ============================================================
+
+    /**
+     * Form pengajuan peminjaman oleh anggota
+     * Menerima ?id_buku=X dari katalog (pre-select buku)
+     */
+    public function createAnggota(Request $request)
     {
-        $bukus = Buku::where('stok', '>', 0)->get();
-        return view('peminjaman.anggota-create', compact('bukus'));
+        $bukus = Buku::with('kategori')->where('stok', '>', 0)->get();
+        $bukuDipilih = $request->has('buku_id') ? (array) $request->buku_id : [];
+        $bukusByKategori = $bukus->groupBy(function($item) {
+            return $item->kategori->nama_kategori ?? 'Lainnya';
+        });
+        return view('peminjaman.anggota-create', compact('bukusByKategori', 'bukuDipilih'));
     }
 
     public function storeAnggota(Request $request)
     {
         $request->validate([
-            'id_buku' => 'required|array',
-            'id_buku.*' => 'exists:bukus,id_buku',
+            'id_buku'                 => 'required|array|min:1',
+            'id_buku.*'               => 'exists:bukus,id_buku',
             'tanggal_kembali_rencana' => 'required|date|after:today',
         ]);
 
         DB::beginTransaction();
         try {
+            // Cari data anggota berdasarkan NIM user yang login
             $anggota = Anggota::where('nim', Auth::user()->nim)->first();
-            
+
             if (!$anggota) {
-                return redirect()->back()->with('error', 'Data anggota tidak ditemukan. Hubungi petugas.');
+                return redirect()->back()
+                                 ->with('error', 'Data anggota tidak ditemukan. Hubungi petugas.');
+            }
+
+            // Cek apakah semua buku masih ada stok
+            foreach ($request->id_buku as $id_buku) {
+                $buku = Buku::find($id_buku);
+                if (!$buku || $buku->stok < 1) {
+                    return redirect()->back()
+                                     ->with('error', "Stok buku '{$buku?->judul_buku}' sudah habis.");
+                }
             }
 
             $peminjaman = Peminjaman::create([
-                'id_anggota' => $anggota->id_anggota,
-                'id_user' => null,
-                'tanggal_pinjam' => null,
+                'id_anggota'              => $anggota->id_anggota,
+                'id_user'                 => null,
+                'tanggal_pinjam'          => null,
                 'tanggal_kembali_rencana' => $request->tanggal_kembali_rencana,
-                'status' => 'menunggu',
-                'status_pengajuan' => 'menunggu',
+                'status'                  => 'menunggu',
+                'status_pengajuan'        => 'menunggu',
             ]);
 
             foreach ($request->id_buku as $id_buku) {
                 DetailPeminjaman::create([
                     'id_peminjaman' => $peminjaman->id_peminjaman,
-                    'id_buku' => $id_buku,
-                    'jumlah' => 1,
+                    'id_buku'       => $id_buku,
+                    'jumlah'        => 1,
                 ]);
             }
 
             DB::commit();
-            return redirect()->route('peminjaman.anggota.index')->with('success', 'Pengajuan peminjaman berhasil dikirim. Menunggu persetujuan petugas.');
+            return redirect()->route('peminjaman.anggota.index')
+                             ->with('success', 'Pengajuan berhasil dikirim! Menunggu persetujuan petugas.');
         } catch (\Exception $e) {
             DB::rollback();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
@@ -219,7 +281,7 @@ class PeminjamanController extends Controller
 
     public function indexAnggota()
     {
-        $anggota = Anggota::where('nim', Auth::user()->nim)->first();
+        $anggota     = Anggota::where('nim', Auth::user()->nim)->first();
         $peminjamans = Peminjaman::where('id_anggota', $anggota->id_anggota ?? 0)
             ->with('detailPeminjaman.buku')
             ->orderBy('created_at', 'desc')

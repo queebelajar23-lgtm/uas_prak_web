@@ -32,6 +32,13 @@
 .table-glass{background:rgba(255,255,255,0.7);backdrop-filter:blur(10px);border-radius:20px;overflow:hidden;}
 .table-glass thead th{background:rgba(255,255,255,0.5);color:#013C58;font-weight:600;border:none;}
 .table-glass tbody td{color:#013C58;border-bottom:1px solid rgba(0,0,0,0.05);}
+
+/* Card buku untuk anggota */
+.card-buku{border-radius:16px;overflow:hidden;transition:transform 0.2s;height:100%;background:white;box-shadow:0 5px 10px rgba(0,0,0,0.05);}
+.card-buku:hover{transform:translateY(-5px);box-shadow:0 10px 20px rgba(0,0,0,0.1);}
+.btn-pinjam{background:#F5A201;color:#013C58;border-radius:12px;font-weight:600;}
+.btn-pinjam:hover{background:#FFBA42;color:#013C58;}
+.badge-kategori{background:#00537A;color:white;padding:3px 8px;border-radius:20px;font-size:11px;display:inline-block;margin-top:5px;}
 </style>
 
 <div class="center-elements">
@@ -43,6 +50,49 @@
 </div>
 
 <div class="container-fluid position-relative" style="z-index:10">
+
+@if(auth()->user()->role == 'anggota')
+    <!-- DASHBOARD UNTUK ANGGOTA -->
+    <div class="welcome-card d-flex justify-content-between align-items-center">
+        <div>
+            <h2><i class="fas fa-smile-wink me-2" style="color:#FFD35B"></i>Selamat Datang, {{ auth()->user()->name }}!</h2>
+            <p>Silakan pilih buku yang ingin dipinjam. Maksimal peminjaman 7 hari, denda Rp 1.000/hari.</p>
+        </div>
+        <div><i class="fas fa-book" style="font-size:60px;opacity:0.5"></i><i class="fas fa-pencil-alt" style="font-size:40px;opacity:0.5"></i></div>
+    </div>
+
+    <h4 class="mb-3" style="color:#013C58;"><i class="fas fa-book-open me-2"></i>Koleksi Buku</h4>
+    <div class="row">
+        @forelse($bukus as $buku)
+        <div class="col-md-4 col-lg-3 mb-4">
+            <div class="card card-buku h-100">
+                <div class="card-body">
+                    <h5 class="card-title">{{ $buku->judul_buku }}</h5>
+                    <p class="card-text text-muted small">
+                        <i class="fas fa-user"></i> {{ $buku->penulis }}<br>
+                        <i class="fas fa-building"></i> {{ $buku->penerbit }}<br>
+                        <span class="badge-kategori">{{ $buku->kategori->nama_kategori ?? 'Umum' }}</span><br>
+                        <i class="fas fa-boxes"></i> Stok: {{ $buku->stok }}
+                    </p>
+                </div>
+                <div class="card-footer bg-transparent border-top-0 pb-3">
+                    @if($buku->stok > 0)
+                        <a href="{{ route('peminjaman.anggota.create', ['buku_id' => $buku->id_buku]) }}" class="btn btn-pinjam w-100">
+                            <i class="fas fa-hand-peace me-1"></i> Pinjam
+                        </a>
+                    @else
+                        <button class="btn btn-secondary w-100" disabled>Stok Habis</button>
+                    @endif
+                </div>
+            </div>
+        </div>
+        @empty
+        <div class="col-12"><div class="alert alert-warning">Belum ada buku tersedia.</div></div>
+        @endforelse
+    </div>
+
+@else
+    <!-- DASHBOARD UNTUK ADMIN & PETUGAS -->
     <div class="welcome-card d-flex justify-content-between align-items-center">
         <div><h2><i class="fas fa-smile-wink me-2" style="color:#FFD35B"></i>Selamat Datang, {{ auth()->user()->name }}!</h2><p>Kelola perpustakaan BukuKita dengan mudah dan nyaman</p></div>
         <div><i class="fas fa-book" style="font-size:60px;opacity:0.5"></i><i class="fas fa-pencil-alt" style="font-size:40px;opacity:0.5"></i></div>
@@ -50,7 +100,14 @@
 
     <div class="row">
         <div class="col-md-3"><div class="stat-card d-flex align-items-center"><div class="stat-icon buku me-3"><i class="fas fa-book"></i></div><div><h3 class="stat-number">{{ $totalBuku ?? 0 }}</h3><p class="stat-label">Total Buku</p></div></div></div>
-        <div class="col-md-3"><div class="stat-card d-flex align-items-center"><div class="stat-icon anggota me-3"><i class="fas fa-users"></i></div><div><h3 class="stat-number">{{ $totalAnggota ?? 0 }}</h3><p class="stat-label">Total Anggota</p></div></div></div>
+        @if(auth()->user()->role == 'admin' || auth()->user()->role == 'petugas')
+        <div class="col-md-3">
+            <div class="stat-card d-flex align-items-center">
+                <div class="stat-icon anggota me-3"><i class="fas fa-users"></i></div>
+                <div><h3 class="stat-number">{{ $totalAnggota ?? 0 }}</h3><p class="stat-label">Total Anggota</p></div>
+            </div>
+        </div>
+        @endif
         <div class="col-md-3"><div class="stat-card d-flex align-items-center"><div class="stat-icon peminjaman me-3"><i class="fas fa-hand-peace"></i></div><div><h3 class="stat-number">{{ $totalPeminjaman ?? 0 }}</h3><p class="stat-label">Total Peminjaman</p></div></div></div>
         <div class="col-md-3"><div class="stat-card d-flex align-items-center"><div class="stat-icon aktif me-3"><i class="fas fa-spinner"></i></div><div><h3 class="stat-number">{{ $peminjamanAktif ?? 0 }}</h3><p class="stat-label">Sedang Dipinjam</p></div></div></div>
     </div>
@@ -73,12 +130,14 @@
         </div></div></div>
     </div>
 
-    @if(auth()->user()->role=='anggota' && isset($riwayatPinjaman) && count($riwayatPinjaman)>0)
+    @if(isset($riwayatPinjaman) && count($riwayatPinjaman)>0)
     <div class="info-card mt-3"><div class="card-header" style="background:linear-gradient(135deg,#00537A,#013C58);color:white;padding:15px 20px;font-weight:700">📜 Riwayat Peminjaman Saya</div>
     <div class="card-body p-0"><div class="table-responsive"><table class="table table-glass mb-0"><thead><tr><th>📅 Tgl Pinjam</th><th>📚 Buku</th><th>📅 Rencana Kembali</th><th>📌 Status</th><th>💰 Denda</th></tr></thead>
     <tbody>@foreach($riwayatPinjaman as $p)@foreach($p->detailPeminjaman as $d)
-    <tr><td>{{ $p->tanggal_pinjam->format('d/m/Y') }}</td><td>{{ $d->buku->judul_buku }}</td><td>{{ $p->tanggal_kembali_rencana->format('d/m/Y') }}</td><td>@if($p->status=='dipinjam')<span class="badge-dipinjam">Dipinjam</span>@else<span class="badge-kembali">Kembali</span>@endif</td><td>Rp {{ number_format($p->denda,0,',','.') }}</td></tr>
+    <tr><td>{{ $p->tanggal_pinjam->format('d/m/Y') }}</td><td>{{ $d->buku->judul_buku }}</td><td>{{ $p->tanggal_kembali_rencana->format('d/m/Y') }}</td><td>@if($p->status=='dipinjam')<span class="badge-dipinjam">Dipinjam</span>@else<span class="badge-kembali">Kembali</span>@endif</span></td><td>Rp {{ number_format($p->denda,0,',','.') }}</td></tr>
     @endforeach @endforeach</tbody></table></div></div></div>
     @endif
+@endif
+
 </div>
 @endsection
