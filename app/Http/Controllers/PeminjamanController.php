@@ -83,8 +83,15 @@ class PeminjamanController extends Controller
         DB::beginTransaction();
         try {
             $tanggal_kembali = now();
-            $terlambat_hari = max(0, now()->diffInDays($peminjaman->tanggal_kembali_rencana));
-            $denda = $terlambat_hari > 0 ? $terlambat_hari * 1000 : 0;
+            $tanggal_rencana = $peminjaman->tanggal_kembali_rencana;
+            
+            // Hitung selisih hari (pembulatan ke atas jika lewat)
+            $terlambat_hari = 0;
+            if ($tanggal_kembali->gt($tanggal_rencana)) {
+                $terlambat_hari = $tanggal_kembali->diffInDays($tanggal_rencana);
+            }
+            
+            $denda = $terlambat_hari * 1000;
 
             $peminjaman->update([
                 'tanggal_kembali_aktual' => $tanggal_kembali,
@@ -92,6 +99,7 @@ class PeminjamanController extends Controller
                 'denda' => $denda,
             ]);
 
+            // Kembalikan stok
             foreach ($peminjaman->detailPeminjaman as $detail) {
                 $buku = Buku::find($detail->id_buku);
                 $buku->stok += $detail->jumlah;
