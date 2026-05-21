@@ -22,24 +22,24 @@ class DashboardController extends Controller
         $totalPeminjaman = Peminjaman::count();
         $peminjamanAktif = Peminjaman::where('status', 'dipinjam')->count();
         
-        // 1. Total Buku Tersedia (stok > 0)
+        // Total Buku Tersedia (stok > 0)
         $totalStokBuku = Buku::where('stok', '>', 0)->sum('stok');
         
-        // 2. Total Buku Dipinjam
+        // Total Buku Dipinjam
         $totalBukuDipinjam = DetailPeminjaman::whereHas('peminjaman', function($q) {
             $q->where('status', 'dipinjam');
         })->sum('jumlah');
         
-        // 3. Total Anggota Aktif (yang pernah pinjam)
+        // Total Anggota Aktif (yang pernah pinjam)
         $anggotaAktif = Peminjaman::distinct('id_anggota')->count('id_anggota');
         
-        // 4. Total Denda Terkumpul
+        // Total Denda Terkumpul
         $totalDenda = Peminjaman::sum('denda');
         
-        // 5. Yang Belum Bayar Denda
+        // Yang Belum Bayar Denda
         $belumBayarDenda = Peminjaman::where('denda', '>', 0)->where('status', '!=', 'kembali')->count();
         
-        // 6. Buku Terpopuler (3 buku paling sering dipinjam)
+        // Buku Terpopuler (3 buku paling sering dipinjam)
         $bukuTerpopuler = DetailPeminjaman::select('id_buku', DB::raw('count(*) as total'))
             ->with('buku')
             ->groupBy('id_buku')

@@ -6,23 +6,25 @@ use App\Http\Controllers\AnggotaController;
 use App\Http\Controllers\PeminjamanController;
 use Illuminate\Support\Facades\Route;
 
+// Halaman utama redirect ke dashboard
 Route::get('/', function () {
     return redirect('/dashboard');
 });
 
+// Dashboard (butuh login)
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth'])
     ->name('dashboard');
 
-// Buku routes dengan middleware role
+// Buku routes (hanya admin & petugas)
 Route::resource('buku', BukuController::class)
     ->middleware(['auth', 'role:admin,petugas']);
 
-// Anggota routes dengan middleware role
+// Anggota routes (hanya admin & petugas)
 Route::resource('anggota', AnggotaController::class)
     ->middleware(['auth', 'role:admin,petugas']);
 
-// Peminjaman routes
+// Peminjaman routes (hanya admin & petugas)
 Route::prefix('peminjaman')->middleware(['auth', 'role:admin,petugas'])->group(function () {
     Route::get('/', [PeminjamanController::class, 'index'])->name('peminjaman.index');
     Route::get('/create', [PeminjamanController::class, 'create'])->name('peminjaman.create');
@@ -32,4 +34,10 @@ Route::prefix('peminjaman')->middleware(['auth', 'role:admin,petugas'])->group(f
     Route::delete('/{id}', [PeminjamanController::class, 'destroy'])->name('peminjaman.destroy');
 });
 
+// Profile route
+Route::get('/profile', function () {
+    return view('profile.show');
+})->middleware(['auth'])->name('profile.show');
+
+// Auth routes dari Breeze (login, register, logout, dll)
 require __DIR__.'/auth.php';

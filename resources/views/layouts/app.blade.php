@@ -143,7 +143,7 @@
                 <a class="nav-link" href="{{ route('peminjaman.index') }}"><i class="fas fa-hand-peace"></i> Transaksi Peminjaman</a>
                 @endif
                 <hr style="border-color:rgba(255,255,255,0.1); margin:15px;">
-                <a class="nav-link" href="#"><i class="fas fa-user-circle"></i> Profil Saya</a>
+                <a class="nav-link" href="{{ url('/profile') }}"><i class="fas fa-user-circle"></i> Profil Saya</a>
                 <a class="nav-link" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </a>

@@ -23,13 +23,13 @@ class BukuController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'id_kategori' => 'required',
-            'judul_buku' => 'required',
-            'penulis' => 'required',
-            'penerbit' => 'required',
-            'tahun_terbit' => 'required',
-            'stok' => 'required|integer',
-            'lokasi_rak' => 'nullable',
+            'id_kategori' => 'required|exists:kategoris,id_kategori',
+            'judul_buku' => 'required|string|max:100',
+            'penulis' => 'required|string|max:100',
+            'penerbit' => 'required|string|max:100',
+            'tahun_terbit' => 'required|digits:4|integer|min:1900|max:' . date('Y'),
+            'stok' => 'required|integer|min:0',
+            'lokasi_rak' => 'nullable|string|max:20',
         ]);
 
         Buku::create($request->all());
@@ -52,13 +52,13 @@ class BukuController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'id_kategori' => 'required',
-            'judul_buku' => 'required',
-            'penulis' => 'required',
-            'penerbit' => 'required',
-            'tahun_terbit' => 'required',
-            'stok' => 'required|integer',
-            'lokasi_rak' => 'nullable',
+            'id_kategori' => 'required|exists:kategoris,id_kategori',
+            'judul_buku' => 'required|string|max:100',
+            'penulis' => 'required|string|max:100',
+            'penerbit' => 'required|string|max:100',
+            'tahun_terbit' => 'required|digits:4|integer|min:1900|max:' . date('Y'),
+            'stok' => 'required|integer|min:0',
+            'lokasi_rak' => 'nullable|string|max:20',
         ]);
 
         $buku = Buku::findOrFail($id);
