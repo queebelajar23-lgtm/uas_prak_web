@@ -134,16 +134,31 @@
                 <small style="color:#A8E8F9;">Sistem Peminjaman</small>
             </div>
             <nav class="nav flex-column">
+                <!-- DASHBOARD - SEMUA ROLE -->
                 <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
-                @if(auth()->user()->role != 'anggota')
-                <a class="nav-link" href="{{ route('buku.index') }}"><i class="fas fa-book"></i> Data Buku</a>
-                <a class="nav-link" href="{{ route('anggota.index') }}"><i class="fas fa-users"></i> Data Anggota</a>
-                <a class="nav-link" href="{{ route('peminjaman.index') }}"><i class="fas fa-hand-peace"></i> Transaksi Peminjaman</a>
+                
+                <!-- MENU UNTUK ADMIN DAN PETUGAS -->
+                @if(auth()->user()->role == 'admin' || auth()->user()->role == 'petugas')
+                    <a class="nav-link" href="{{ route('buku.index') }}"><i class="fas fa-book"></i> Data Buku</a>
+                    <a class="nav-link" href="{{ route('anggota.index') }}"><i class="fas fa-users"></i> Data Anggota</a>
+                    <a class="nav-link" href="{{ route('peminjaman.index') }}"><i class="fas fa-hand-peace"></i> Transaksi Peminjaman</a>
+                    <a class="nav-link" href="{{ route('peminjaman.pending') }}">
+                        <i class="fas fa-clock"></i> Pengajuan Menunggu
+                    </a>
                 @endif
+                
+                <!-- MENU UNTUK ANGGOTA SAJA -->
+                @if(auth()->user()->role == 'anggota')
+                    <a class="nav-link" href="{{ route('peminjaman.anggota.create') }}"><i class="fas fa-hand-peace"></i> Ajukan Peminjaman</a>
+                    <a class="nav-link" href="{{ route('peminjaman.anggota.index') }}"><i class="fas fa-history"></i> Riwayat Pengajuan</a>
+                @endif
+                
                 <hr style="border-color:rgba(255,255,255,0.1); margin:15px;">
-                <a class="nav-link" href="{{ url('/profile') }}"><i class="fas fa-user-circle"></i> Profil Saya</a>
+                
+                <!-- MENU UNTUK SEMUA ROLE -->
+                <a class="nav-link" href="{{ route('profile.show') }}"><i class="fas fa-user-circle"></i> Profil Saya</a>
                 <a class="nav-link" href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                     <i class="fas fa-sign-out-alt"></i> Logout
                 </a>

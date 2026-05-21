@@ -11,7 +11,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
@@ -27,11 +26,11 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'nim' => ['required', 'string', 'max:20', 'unique:users,nim', 'unique:anggotas,nim'],
-            'kelas' => ['required', 'string', 'max:20'],
-            'jurusan' => ['required', 'string', 'max:50'],
-            'no_hp' => ['required', 'string', 'max:15'],
-            'alamat' => ['required', 'string'],
+            'nim' => ['nullable', 'string', 'max:20'],
+            'kelas' => ['nullable', 'string', 'max:20'],
+            'jurusan' => ['nullable', 'string', 'max:50'],
+            'no_hp' => ['nullable', 'string', 'max:15'],
+            'alamat' => ['nullable', 'string'],
         ]);
 
         $user = User::create([
@@ -46,18 +45,22 @@ class RegisteredUserController extends Controller
             'alamat' => $request->alamat,
         ]);
 
-        Anggota::create([
-            'nama_anggota' => $user->name,
-            'nim' => $user->nim,
-            'kelas' => $user->kelas,
-            'jurusan' => $user->jurusan,
-            'no_hp' => $user->no_hp,
-            'alamat' => $user->alamat,
-        ]);
+        // Hanya buat di tabel anggotas jika nim diisi
+        if ($request->filled('nim')) {
+            Anggota::create([
+                'nama_anggota' => $request->name,
+                'nim' => $request->nim,
+                'kelas' => $request->kelas ?? '',
+                'jurusan' => $request->jurusan ?? '',
+                'no_hp' => $request->no_hp ?? '',
+                'alamat' => $request->alamat ?? '',
+            ]);
+        }
 
         event(new Registered($user));
 
-        // Jangan login otomatis, redirect ke halaman login dengan pesan sukses
-        return redirect()->route('login')->with('success', 'Registrasi berhasil! Silakan login dengan akun Anda.');
+        Auth::login($user);
+
+        return redirect(route('dashboard', absolute: false));
     }
 }

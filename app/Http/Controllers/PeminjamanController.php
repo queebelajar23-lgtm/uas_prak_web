@@ -12,11 +12,13 @@ use Illuminate\Support\Facades\DB;
 
 class PeminjamanController extends Controller
 {
-    // HAPUS __construct() !!!
-
+    // ============ UNTUK ADMIN & PETUGAS ============
+    
     public function index()
     {
-        $peminjamans = Peminjaman::with(['anggota', 'user', 'detailPeminjaman.buku'])->orderBy('created_at', 'desc')->get();
+        $peminjamans = Peminjaman::with(['anggota', 'user', 'detailPeminjaman.buku'])
+            ->orderBy('created_at', 'desc')
+            ->get();
         return view('peminjaman.index', compact('peminjamans'));
     }
 
@@ -44,6 +46,7 @@ class PeminjamanController extends Controller
                 'tanggal_pinjam' => now(),
                 'tanggal_kembali_rencana' => $request->tanggal_kembali_rencana,
                 'status' => 'dipinjam',
+                'status_pengajuan' => 'disetujui',
             ]);
 
             foreach ($request->id_buku as $id_buku) {
@@ -83,15 +86,8 @@ class PeminjamanController extends Controller
         DB::beginTransaction();
         try {
             $tanggal_kembali = now();
-            $tanggal_rencana = $peminjaman->tanggal_kembali_rencana;
-            
-            // Hitung selisih hari (pembulatan ke atas jika lewat)
-            $terlambat_hari = 0;
-            if ($tanggal_kembali->gt($tanggal_rencana)) {
-                $terlambat_hari = $tanggal_kembali->diffInDays($tanggal_rencana);
-            }
-            
-            $denda = $terlambat_hari * 1000;
+            $terlambat_hari = max(0, now()->diffInDays($peminjaman->tanggal_kembali_rencana));
+            $denda = $terlambat_hari > 0 ? $terlambat_hari * 1000 : 0;
 
             $peminjaman->update([
                 'tanggal_kembali_aktual' => $tanggal_kembali,
@@ -99,7 +95,6 @@ class PeminjamanController extends Controller
                 'denda' => $denda,
             ]);
 
-            // Kembalikan stok
             foreach ($peminjaman->detailPeminjaman as $detail) {
                 $buku = Buku::find($detail->id_buku);
                 $buku->stok += $detail->jumlah;
@@ -122,5 +117,113 @@ class PeminjamanController extends Controller
         }
         $peminjaman->delete();
         return redirect()->route('peminjaman.index')->with('success', 'Data peminjaman dihapus');
+    }
+
+    // ============ UNTUK PERSETUJUAN PETUGAS ============
+    
+    public function pending()
+    {
+        $peminjamans = Peminjaman::where('status_pengajuan', 'menunggu')
+            ->with(['anggota', 'detailPeminjaman.buku'])
+            ->orderBy('created_at', 'asc')
+            ->get();
+        return view('peminjaman.pending', compact('peminjamans'));
+    }
+
+    public function approve($id)
+    {
+        DB::beginTransaction();
+        try {
+            $peminjaman = Peminjaman::with('detailPeminjaman.buku')->findOrFail($id);
+            
+            $peminjaman->update([
+                'id_user' => Auth::id(),
+                'tanggal_pinjam' => now(),
+                'status' => 'dipinjam',
+                'status_pengajuan' => 'disetujui',
+            ]);
+
+            foreach ($peminjaman->detailPeminjaman as $detail) {
+                $buku = Buku::find($detail->id_buku);
+                $buku->stok -= $detail->jumlah;
+                $buku->save();
+            }
+
+            DB::commit();
+            return redirect()->route('peminjaman.pending')->with('success', 'Peminjaman disetujui.');
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    public function reject($id)
+    {
+        $peminjaman = Peminjaman::findOrFail($id);
+        $peminjaman->update([
+            'status_pengajuan' => 'ditolak',
+            'status' => 'ditolak',
+        ]);
+        
+        return redirect()->route('peminjaman.pending')->with('success', 'Peminjaman ditolak.');
+    }
+
+    // ============ UNTUK ANGGOTA (PENGAJUAN) ============
+    
+    public function createAnggota()
+    {
+        $bukus = Buku::where('stok', '>', 0)->get();
+        return view('peminjaman.anggota-create', compact('bukus'));
+    }
+
+    public function storeAnggota(Request $request)
+    {
+        $request->validate([
+            'id_buku' => 'required|array',
+            'id_buku.*' => 'exists:bukus,id_buku',
+            'tanggal_kembali_rencana' => 'required|date|after:today',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $anggota = Anggota::where('nim', Auth::user()->nim)->first();
+            
+            if (!$anggota) {
+                return redirect()->back()->with('error', 'Data anggota tidak ditemukan. Hubungi petugas.');
+            }
+
+            $peminjaman = Peminjaman::create([
+                'id_anggota' => $anggota->id_anggota,
+                'id_user' => null,
+                'tanggal_pinjam' => null,
+                'tanggal_kembali_rencana' => $request->tanggal_kembali_rencana,
+                'status' => 'menunggu',
+                'status_pengajuan' => 'menunggu',
+            ]);
+
+            foreach ($request->id_buku as $id_buku) {
+                DetailPeminjaman::create([
+                    'id_peminjaman' => $peminjaman->id_peminjaman,
+                    'id_buku' => $id_buku,
+                    'jumlah' => 1,
+                ]);
+            }
+
+            DB::commit();
+            return redirect()->route('peminjaman.anggota.index')->with('success', 'Pengajuan peminjaman berhasil dikirim. Menunggu persetujuan petugas.');
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+    public function indexAnggota()
+    {
+        $anggota = Anggota::where('nim', Auth::user()->nim)->first();
+        $peminjamans = Peminjaman::where('id_anggota', $anggota->id_anggota ?? 0)
+            ->with('detailPeminjaman.buku')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        return view('peminjaman.anggota-index', compact('peminjamans'));
     }
 }

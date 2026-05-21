@@ -2,62 +2,64 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\Anggota;
+use App\Http\Requests\ProfileUpdateRequest;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Redirect;
+use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    // Menampilkan profil
-    public function show()
+    public function show(Request $request): View
     {
-        $user = Auth::user(); // Ambil data user yang login
-        return view('profile.show', compact('user'));
+        return view('profile.show', [
+            'user' => $request->user(),
+        ]);
     }
 
-    // Form edit profil
-    public function edit()
+    public function edit(Request $request): View
     {
-        $user = Auth::user();
-        $anggota = Anggota::where('nim', $user->nim)->first();
-        return view('profile.edit', compact('user', 'anggota'));
+        return view('profile.edit', [
+            'user' => $request->user(),
+        ]);
     }
 
-    // Update profil
-    public function update(Request $request)
+    public function update(Request $request): RedirectResponse
     {
-        $user = Auth::user();
-        $request->validate([
+        $user = $request->user();
+        
+        $rules = [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,'.$user->id,
-            'kelas' => 'nullable|string|max:20',
-            'jurusan' => 'nullable|string|max:50',
-            'no_hp' => 'nullable|string|max:15',
-            'alamat' => 'nullable|string',
-        ]);
-
-        $user->update([
-            'name' => $request->name,
-            'email' => $request->email,
-            'kelas' => $request->kelas,
-            'jurusan' => $request->jurusan,
-            'no_hp' => $request->no_hp,
-            'alamat' => $request->alamat,
-        ]);
-
-        // Update tabel anggota jika ada
-        $anggota = Anggota::where('nim', $user->nim)->first();
-        if ($anggota) {
-            $anggota->update([
-                'nama_anggota' => $request->name,
-                'kelas' => $request->kelas,
-                'jurusan' => $request->jurusan,
-                'no_hp' => $request->no_hp,
-                'alamat' => $request->alamat,
-            ]);
+            'email' => 'required|email|unique:users,email,' . $user->id,
+        ];
+        
+        if ($user->role == 'anggota') {
+            $rules['nim'] = 'nullable|string|max:20';
+            $rules['kelas'] = 'nullable|string|max:20';
+            $rules['jurusan'] = 'nullable|string|max:50';
+            $rules['no_hp'] = 'nullable|string|max:15';
+            $rules['alamat'] = 'nullable|string';
         }
-
-        return redirect()->route('profile.show')->with('success', 'Profil berhasil diupdate.');
+        
+        $request->validate($rules);
+        
+        $user->fill($request->only(['name', 'email']));
+        
+        if ($user->role == 'anggota') {
+            $user->nim = $request->nim;
+            $user->kelas = $request->kelas;
+            $user->jurusan = $request->jurusan;
+            $user->no_hp = $request->no_hp;
+            $user->alamat = $request->alamat;
+        }
+        
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+        
+        $user->save();
+        
+        return redirect()->route('profile.show')->with('success', 'Profil berhasil diperbarui!');
     }
 }

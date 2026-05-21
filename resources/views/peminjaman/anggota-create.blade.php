@@ -109,6 +109,25 @@ select[multiple] {
 .btn-cancel:hover {
     background: rgba(0, 83, 122, 0.2);
 }
+
+.info-box {
+    background: rgba(245, 162, 1, 0.1);
+    border-left: 4px solid #F5A201;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+}
+
+.info-box p {
+    margin: 0;
+    color: #013C58;
+    font-size: 14px;
+}
+
+.info-box i {
+    color: #F5A201;
+    margin-right: 10px;
+}
 </style>
 
 <div class="container-fluid">
@@ -116,27 +135,23 @@ select[multiple] {
         <div class="col-12">
             <div class="form-card">
                 <div class="form-header">
-                    <h3><i class="fas fa-hand-peace me-2"></i> Form Peminjaman Buku</h3>
-                    <p>Silakan pilih anggota dan buku yang akan dipinjam</p>
+                    <h3><i class="fas fa-hand-peace me-2"></i> Ajukan Peminjaman Buku</h3>
+                    <p>Silakan pilih buku yang ingin Anda pinjam</p>
                 </div>
 
                 <div class="form-body">
+                    <div class="info-box">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Informasi:</strong> Pengajuan Anda akan diproses oleh petugas perpustakaan. 
+                        Status pengajuan dapat dilihat di menu "Riwayat Pengajuan".
+                    </div>
+
                     @if($errors->any())
                         <div class="alert alert-danger">{{ $errors->first() }}</div>
                     @endif
 
-                    <form method="POST" action="{{ route('peminjaman.store') }}">
+                    <form method="POST" action="{{ route('peminjaman.anggota.store') }}">
                         @csrf
-
-                        <div class="form-group">
-                            <label><i class="fas fa-user me-1"></i> Pilih Anggota</label>
-                            <select name="id_anggota" class="form-control" required>
-                                <option value="">-- Pilih Anggota --</option>
-                                @foreach($anggotas as $anggota)
-                                <option value="{{ $anggota->id_anggota }}">{{ $anggota->nama_anggota }} ({{ $anggota->nim }})</option>
-                                @endforeach
-                            </select>
-                        </div>
 
                         <div class="form-group">
                             <label><i class="fas fa-calendar-alt me-1"></i> Tanggal Rencana Kembali</label>
@@ -159,11 +174,17 @@ select[multiple] {
                             <small class="text-muted">Tekan Ctrl (Windows) atau Cmd (Mac) untuk memilih lebih dari satu buku</small>
                         </div>
 
-                        <button type="submit" class="btn-submit">
-                            <i class="fas fa-save me-2"></i> Simpan Peminjaman
+                        @if(count($bukus) == 0)
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> Maaf, saat ini tidak ada buku yang tersedia untuk dipinjam.
+                            </div>
+                        @endif
+
+                        <button type="submit" class="btn-submit" {{ count($bukus) == 0 ? 'disabled' : '' }}>
+                            <i class="fas fa-paper-plane me-2"></i> Kirim Pengajuan
                         </button>
 
-                        <a href="{{ route('peminjaman.index') }}" class="btn-cancel">
+                        <a href="{{ route('dashboard') }}" class="btn-cancel">
                             <i class="fas fa-arrow-left me-2"></i> Kembali
                         </a>
                     </form>
