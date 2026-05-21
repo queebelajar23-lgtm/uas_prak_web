@@ -155,6 +155,7 @@
                         <div class="status-badge">
                             <i class="fas fa-circle me-1" style="font-size: 8px;"></i> Active
                         </div>
+                        <a href="{{ route('profile.edit') }}" class="btn btn-sm btn-warning mt-2"><i class="fas fa-edit"></i> Edit Profil</a>
                     </div>
                 </div>
 
@@ -237,6 +238,7 @@
                         <span class="skill-tag">Komunikasi</span>
                         <span class="skill-tag">Teknologi Informasi</span>
                     </div>
+                    <a href="{{ route('profile.edit') }}" class="btn btn-sm btn-warning mt-2"><i class="fas fa-edit"></i> Edit Profil</a>
                 </div>
             </div>
         </div>

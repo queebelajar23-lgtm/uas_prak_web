@@ -35,9 +35,9 @@ Route::prefix('peminjaman')->middleware(['auth', 'role:admin,petugas'])->group(f
 });
 
 // Profile route
-Route::get('/profile', function () {
-    return view('profile.show');
-})->middleware(['auth'])->name('profile.show');
+Route::get('/profile', [App\Http\Controllers\ProfileController::class, 'show'])->name('profile.show')->middleware('auth');
+Route::get('/profile/edit', [App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit')->middleware('auth');
+Route::put('/profile/update', [App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update')->middleware('auth');
 
 // Auth routes dari Breeze (login, register, logout, dll)
 require __DIR__.'/auth.php';

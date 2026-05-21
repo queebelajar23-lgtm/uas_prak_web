@@ -10,13 +10,10 @@
 .stat-card:hover{transform:translateY(-5px);background:rgba(255,255,255,0.95);box-shadow:0 15px 30px rgba(0,0,0,0.1);}
 .stat-icon{width:55px;height:55px;border-radius:15px;display:flex;align-items:center;justify-content:center;font-size:24px;color:white;}
 .stat-icon.buku{background:linear-gradient(135deg,#667eea,#764ba2);}
-.stat-icon.anggota{background:linear-gradient(135deg,#1a4a2a,#0d3b1f);}
-.stat-icon.peminjaman{background:linear-gradient(135deg,#f093fb,#f5576c);}
-.stat-icon.aktif{background:linear-gradient(135deg,#4facfe,#00f2fe);}
 .stat-number{font-size:32px;font-weight:700;color:#013C58;margin:0;}
 .stat-label{color:#555;font-size:14px;margin:0;font-weight:500;}
 
-.info-card{background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);border-radius:20px;border:1px solid rgba(255,255,255,0.5);overflow:hidden;margin-bottom:20px;height:100%;transition:.3s;box-shadow:0 5px 15px rgba(0,0,0,0.05);}
+.info-card{background:rgba(255,255,255,0.85);backdrop-filter:blur(10px);border-radius:20px;border:1px solid rgba(255,255,255,0.5);overflow:hidden;margin-bottom:20px;transition:.3s;box-shadow:0 5px 15px rgba(0,0,0,0.05);}
 .info-card:hover{transform:translateY(-3px);background:rgba(255,255,255,0.95);box-shadow:0 10px 25px rgba(0,0,0,0.1);}
 .info-card .card-header{background:linear-gradient(135deg,#F5A201,#FFD35B);color:#013C58;padding:15px 20px;font-weight:700;border-bottom:1px solid rgba(0,0,0,0.05);}
 .info-card .card-body{padding:20px;}
@@ -49,7 +46,63 @@
 </div>
 
 <div class="container-fluid position-relative" style="z-index:10">
-    <!-- Welcome Card -->
+
+@if(auth()->user()->role == 'anggota')
+    <!-- Welcome Card untuk Anggota -->
+    <div class="welcome-card d-flex justify-content-between align-items-center">
+        <div>
+            <h2><i class="fas fa-smile-wink me-2" style="color:#FFD35B"></i>Selamat Datang, {{ auth()->user()->name }}!</h2>
+            <p>Selamat datang di perpustakaan BukuKita. Anda dapat melihat koleksi buku dan riwayat peminjaman.</p>
+        </div>
+        <div>
+            <i class="fas fa-book" style="font-size:60px;opacity:0.5"></i>
+            <i class="fas fa-pencil-alt" style="font-size:40px;opacity:0.5"></i>
+        </div>
+    </div>
+
+    <!-- Statistik Total Buku saja -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="stat-card d-flex align-items-center">
+                <div class="stat-icon buku me-3"><i class="fas fa-book"></i></div>
+                <div><h3 class="stat-number">{{ $totalBuku ?? 0 }}</h3><p class="stat-label">Total Buku</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Riwayat Peminjaman Anggota -->
+    <div class="info-card mt-3">
+        <div class="card-header"><i class="fas fa-history me-2"></i> Riwayat Peminjaman Saya</div>
+        <div class="card-body p-0">
+            @if(isset($riwayatPinjaman) && count($riwayatPinjaman) > 0)
+                <div class="table-responsive">
+                    <table class="table table-glass mb-0">
+                        <thead>
+                            <tr><th>Tanggal Pinjam</th><th>Buku</th><th>Rencana Kembali</th><th>Status</th><th>Denda</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach($riwayatPinjaman as $pinjam)
+                                @foreach($pinjam->detailPeminjaman as $detail)
+                                <tr>
+                                    <td>{{ $pinjam->tanggal_pinjam->format('d/m/Y') }}</td>
+                                    <td>{{ $detail->buku->judul_buku }}</td>
+                                    <td>{{ $pinjam->tanggal_kembali_rencana->format('d/m/Y') }}</td>
+                                    <td>@if($pinjam->status=='dipinjam')<span class="badge-dipinjam">Dipinjam</span>@else<span class="badge-kembali">Kembali</span>@endif</td>
+                                    <td>Rp {{ number_format($pinjam->denda,0,',','.') }}</td>
+                                </tr>
+                                @endforeach
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <div class="p-3 text-center text-muted">Belum ada riwayat peminjaman.</div>
+            @endif
+        </div>
+    </div>
+
+@else
+    <!-- TAMPILAN UNTUK ADMIN & PETUGAS (seperti sebelumnya) -->
     <div class="welcome-card d-flex justify-content-between align-items-center">
         <div>
             <h2><i class="fas fa-smile-wink me-2" style="color:#FFD35B"></i>Selamat Datang, {{ auth()->user()->name }}!</h2>
@@ -61,32 +114,12 @@
         </div>
     </div>
 
-    <!-- Statistik 4 Card -->
+    <!-- 4 Statistik Card -->
     <div class="row">
-        <div class="col-md-3">
-            <div class="stat-card d-flex align-items-center">
-                <div class="stat-icon buku me-3"><i class="fas fa-book"></i></div>
-                <div><h3 class="stat-number">{{ $totalBuku ?? 0 }}</h3><p class="stat-label">Total Buku</p></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card d-flex align-items-center">
-                <div class="stat-icon anggota me-3"><i class="fas fa-users"></i></div>
-                <div><h3 class="stat-number">{{ $totalAnggota ?? 0 }}</h3><p class="stat-label">Total Anggota</p></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card d-flex align-items-center">
-                <div class="stat-icon peminjaman me-3"><i class="fas fa-hand-peace"></i></div>
-                <div><h3 class="stat-number">{{ $totalPeminjaman ?? 0 }}</h3><p class="stat-label">Total Peminjaman</p></div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stat-card d-flex align-items-center">
-                <div class="stat-icon aktif me-3"><i class="fas fa-spinner"></i></div>
-                <div><h3 class="stat-number">{{ $peminjamanAktif ?? 0 }}</h3><p class="stat-label">Sedang Dipinjam</p></div>
-            </div>
-        </div>
+        <div class="col-md-3"><div class="stat-card d-flex align-items-center"><div class="stat-icon buku me-3"><i class="fas fa-book"></i></div><div><h3 class="stat-number">{{ $totalBuku ?? 0 }}</h3><p class="stat-label">Total Buku</p></div></div></div>
+        <div class="col-md-3"><div class="stat-card d-flex align-items-center"><div class="stat-icon anggota me-3"><i class="fas fa-users"></i></div><div><h3 class="stat-number">{{ $totalAnggota ?? 0 }}</h3><p class="stat-label">Total Anggota</p></div></div></div>
+        <div class="col-md-3"><div class="stat-card d-flex align-items-center"><div class="stat-icon peminjaman me-3"><i class="fas fa-hand-peace"></i></div><div><h3 class="stat-number">{{ $totalPeminjaman ?? 0 }}</h3><p class="stat-label">Total Peminjaman</p></div></div></div>
+        <div class="col-md-3"><div class="stat-card d-flex align-items-center"><div class="stat-icon aktif me-3"><i class="fas fa-spinner"></i></div><div><h3 class="stat-number">{{ $peminjamanAktif ?? 0 }}</h3><p class="stat-label">Sedang Dipinjam</p></div></div></div>
     </div>
 
     <!-- Informasi Sistem & Buku Populer -->
@@ -119,5 +152,7 @@
             </div>
         </div>
     </div>
+@endif
+
 </div>
 @endsection
