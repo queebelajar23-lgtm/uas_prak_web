@@ -39,7 +39,7 @@ Route::middleware(['auth', 'role:admin,petugas'])
         // Statis dulu — tanpa {id}
         Route::get('/',        [PeminjamanController::class, 'index'])      ->name('peminjaman.index');
         Route::get('/create',  [PeminjamanController::class, 'create'])     ->name('peminjaman.create');
-        Route::get('/pending', [PeminjamanController::class, 'pending'])    ->name('peminjaman.pending'); // ← wajib di atas /{id}
+        Route::get('/pending', [PeminjamanController::class, 'pending'])    ->name('peminjaman.pending');
         Route::post('/',       [PeminjamanController::class, 'store'])      ->name('peminjaman.store');
 
         // Dinamis — dengan {id}, letakkan di bawah semua route statis
@@ -51,14 +51,14 @@ Route::middleware(['auth', 'role:admin,petugas'])
     });
 
 // ─── Peminjaman (anggota — pengajuan mandiri) ───────────────
+// Memastikan hak akses murni hanya untuk role 'anggota'
 Route::middleware(['auth', 'role:anggota'])
-    ->prefix('anggota/peminjaman')
+    ->prefix('panel-anggota') // <-- KITA GANTI URL-NYA DI SINI
     ->group(function () {
 
-        // Statis dulu
-        Route::get('/',       [PeminjamanController::class, 'indexAnggota'])  ->name('peminjaman.anggota.index');
-        Route::get('/create', [PeminjamanController::class, 'createAnggota']) ->name('peminjaman.anggota.create');
-        Route::post('/',      [PeminjamanController::class, 'storeAnggota'])  ->name('peminjaman.anggota.store');
+        Route::get('/',        [PeminjamanController::class, 'indexAnggota'])  ->name('anggota.peminjaman.index');
+        Route::get('/create',  [PeminjamanController::class, 'createAnggota']) ->name('anggota.peminjaman.create');
+        Route::post('/store',  [PeminjamanController::class, 'storeAnggota'])  ->name('anggota.peminjaman.store');
     });
 
 // ─── Profile ────────────────────────────────────────────────

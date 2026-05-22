@@ -77,7 +77,7 @@
                 </div>
                 <div class="card-footer bg-transparent border-top-0 pb-3">
                     @if($buku->stok > 0)
-                        <a href="{{ route('peminjaman.anggota.create', ['buku_id' => $buku->id_buku]) }}" class="btn btn-pinjam w-100">
+                        <a href="{{ route('anggota.peminjaman.create', ['buku_id' => $buku->id_buku]) }}" class="btn btn-pinjam w-100">
                             <i class="fas fa-hand-peace me-1"></i> Pinjam
                         </a>
                     @else

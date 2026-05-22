@@ -126,28 +126,27 @@
                                         <td>{{ $detail->buku->judul_buku }}</td>
                                         <td>{{ $pinjam->tanggal_kembali_rencana ? \Carbon\Carbon::parse($pinjam->tanggal_kembali_rencana)->format('d/m/Y') : '-' }}</td>
                                         <td>
-                                            @if($pinjam->status_pengajuan == 'menunggu')
-                                                <span class="status-menunggu"><i class="fas fa-clock me-1"></i> Menunggu</span>
-                                            @elseif($pinjam->status_pengajuan == 'disetujui')
-                                                <span class="status-disetujui"><i class="fas fa-check me-1"></i> Disetujui</span>
-                                            @else
-                                                <span class="status-ditolak"><i class="fas fa-times me-1"></i> Ditolak</span>
+                                            @if($pinjam->status_pengajuan === 'menunggu')
+                                                <span class="badge bg-warning">Menunggu</span>
+                                            @elseif($pinjam->status_pengajuan === 'disetujui')
+                                                <span class="badge bg-success">Disetujui</span>
+                                            @elseif($pinjam->status_pengajuan === 'ditolak')
+                                                <span class="badge bg-danger">Ditolak</span>
                                             @endif
-                                         <\/span>
-                                        <\/td>
+                                        </td>
+
                                         <td>
-                                            @if($pinjam->status == 'dipinjam')
-                                                <span class="status-dipinjam"><i class="fas fa-book me-1"></i> Dipinjam</span>
-                                            @elseif($pinjam->status == 'kembali')
-                                                <span class="status-kembali"><i class="fas fa-undo me-1"></i> Kembali</span>
-                                            @elseif($pinjam->status == 'menunggu')
-                                                <span class="status-menunggu"><i class="fas fa-clock me-1"></i> Menunggu</span>
-                                            @else
-                                                <span class="status-ditolak"><i class="fas fa-times me-1"></i> Ditolak</span>
+                                            @if($pinjam->status === 'menunggu')
+                                                <span class="badge bg-secondary">Menunggu Persetujuan</span>
+                                            @elseif($pinjam->status === 'dipinjam')
+                                                <span class="badge bg-info">Dipinjam</span>
+                                            @elseif($pinjam->status === 'kembali')
+                                                <span class="badge bg-success">Kembali</span>
+                                            @elseif($pinjam->status === 'terlambat')
+                                                <span class="badge bg-danger">Terlambat</span>
                                             @endif
-                                         <\/span>
-                                        <\/td>
-                                        <td>Rp {{ number_format($pinjam->denda, 0, ',', '.') }}<\/td>
+                                        </td>
+                                        <td>Rp {{ number_format($pinjam->denda, 0, ',', '.') }}</td>
                                     </tr>
                                     @endforeach
                                 @endforeach
@@ -158,7 +157,7 @@
                             <i class="fas fa-inbox"></i>
                             <h4>Belum Ada Pengajuan</h4>
                             <p>Anda belum pernah mengajukan peminjaman buku.</p>
-                            <a href="{{ route('peminjaman.anggota.create') }}" class="btn-primary" style="padding: 10px 25px; border-radius: 12px; text-decoration: none; display: inline-block;">
+                            <a href="{{ route('anggota.peminjaman.create') }}" class="btn-primary" style="padding: 10px 25px; border-radius: 12px; text-decoration: none; display: inline-block;">
                                 <i class="fas fa-hand-peace me-2"></i> Ajukan Sekarang
                             </a>
                         </div>

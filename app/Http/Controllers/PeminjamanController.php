@@ -186,7 +186,7 @@ class PeminjamanController extends Controller
             ]);
 
             foreach ($peminjaman->detailPeminjaman as $detail) {
-                Buku::find($detail->id_buku)->decrement('stok', $detail->jumlah);
+              Buku::where('id_buku', $detail->id_buku)->decrement('stok', $detail->jumlah);
             }
 
             DB::commit();
@@ -241,7 +241,7 @@ class PeminjamanController extends Controller
 
             if (!$anggota) {
                 return redirect()->back()
-                                 ->with('error', 'Data anggota tidak ditemukan. Hubungi petugas.');
+                                ->with('error', 'Data anggota tidak ditemukan. Hubungi petugas.');
             }
 
             // Cek apakah semua buku masih ada stok
@@ -249,14 +249,14 @@ class PeminjamanController extends Controller
                 $buku = Buku::find($id_buku);
                 if (!$buku || $buku->stok < 1) {
                     return redirect()->back()
-                                     ->with('error', "Stok buku '{$buku?->judul_buku}' sudah habis.");
+                                    ->with('error', "Stok buku '{$buku?->judul_buku}' sudah habis.");
                 }
             }
 
             $peminjaman = Peminjaman::create([
                 'id_anggota'              => $anggota->id_anggota,
-                'id_user'                 => null,
-                'tanggal_pinjam'          => null,
+                'id_user'                 => Auth::id(), // Diisi ID user yang login agar tidak null
+                'tanggal_pinjam'          => now(),      // Diubah jadi tanggal hari ini (waktu sekarang)
                 'tanggal_kembali_rencana' => $request->tanggal_kembali_rencana,
                 'status'                  => 'menunggu',
                 'status_pengajuan'        => 'menunggu',
@@ -271,8 +271,9 @@ class PeminjamanController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('peminjaman.anggota.index')
-                             ->with('success', 'Pengajuan berhasil dikirim! Menunggu persetujuan petugas.');
+            // Ubah tujuan redirect ke nama route yang baru & unik
+            return redirect()->route('anggota.peminjaman.index')
+                            ->with('success', 'Pengajuan berhasil dikirim! Menunggu persetujuan petugas.');
         } catch (\Exception $e) {
             DB::rollback();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
@@ -281,11 +282,22 @@ class PeminjamanController extends Controller
 
     public function indexAnggota()
     {
-        $anggota     = Anggota::where('nim', Auth::user()->nim)->first();
-        $peminjamans = Peminjaman::where('id_anggota', $anggota->id_anggota ?? 0)
+        // Cari data anggota berdasarkan NIM user yang login
+        $anggota = Anggota::where('nim', Auth::user()->nim)->first();
+
+        // Jika data profil anggota belum sinkron di database, jangan biarkan sistem crash 403.
+        // Berikan pesan error yang jelas agar tahu bahwa seeder/datanya belum beres.
+        if (!$anggota) {
+            return redirect()->route('dashboard')
+                            ->with('error', 'Profil Anggota belum terdaftar di sistem. Silakan hubungi petugas untuk sinkronisasi NIM Anda.');
+        }
+
+        // Jika ada, ambil data peminjamannya seperti biasa
+        $peminjamans = Peminjaman::where('id_anggota', $anggota->id_anggota)
             ->with('detailPeminjaman.buku')
             ->orderBy('created_at', 'desc')
             ->get();
+
         return view('peminjaman.anggota-index', compact('peminjamans'));
     }
 }

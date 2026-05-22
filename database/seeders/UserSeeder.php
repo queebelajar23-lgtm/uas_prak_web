@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -11,6 +10,7 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
+        // 1. Masukkan data Admin & Petugas ke tabel users
         DB::table('users')->insert([
             [
                 'name' => 'Admin BukuKita',
@@ -18,12 +18,6 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('password'),
                 'role' => 'admin',
                 'nim' => null,
-                'kelas' => null,
-                'jurusan' => null,
-                'no_hp' => '081234567890',
-                'alamat' => 'Kantor Perpustakaan',
-                'created_at' => now(),
-                'updated_at' => now(),
             ],
             [
                 'name' => 'Petugas Perpus',
@@ -31,26 +25,28 @@ class UserSeeder extends Seeder
                 'password' => Hash::make('password'),
                 'role' => 'petugas',
                 'nim' => null,
-                'kelas' => null,
-                'jurusan' => null,
-                'no_hp' => '081234567891',
-                'alamat' => 'Meja Layanan',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
-            [
-                'name' => 'Anggota 1',
-                'email' => 'anggota@bukukita.com',
-                'password' => Hash::make('password'),
-                'role' => 'anggota',
-                'nim' => 'F55122001',
-                'kelas' => 'A',
-                'jurusan' => 'Informatika',
-                'no_hp' => '081234567892',
-                'alamat' => 'Jl. Kampus No 1',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ],
+            ]
+        ]);
+
+        // 2. Masukkan data Akun Login Anggota ke tabel users
+        DB::table('users')->insert([
+            'name' => 'Anggota 1',
+            'email' => 'anggota@bukukita.com',
+            'password' => Hash::make('password'),
+            'role' => 'anggota',
+            'nim' => 'F55122001', // Kunci pencocokan
+        ]);
+
+        // 3. SEKALIGUS masukkan data profilnya ke tabel anggotas di sini
+        DB::table('anggotas')->insert([
+            'nim' => 'F55122001', // Harus sama persis dengan yang di atas
+            'nama_anggota' => 'Anggota 1',
+            'kelas' => 'A',
+            'jurusan' => 'Informatika',
+            'no_hp' => '081234567892',
+            'alamat' => 'Jl. Kampus No 1',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 }

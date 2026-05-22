@@ -18,6 +18,7 @@ class Peminjaman extends Model
         'tanggal_kembali_rencana',
         'tanggal_kembali_aktual',
         'status',
+        'status_pengajuan',
         'denda'
     ];
 

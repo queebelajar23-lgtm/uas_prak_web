@@ -176,7 +176,7 @@ select[multiple] {
                         <div class="alert alert-danger">{{ $errors->first() }}</div>
                     @endif
 
-                    <form method="POST" action="{{ route('peminjaman.anggota.store') }}">
+                    <form method="POST" action="{{ route('anggota.peminjaman.store') }}">
                         @csrf
 
                         <div class="form-group">

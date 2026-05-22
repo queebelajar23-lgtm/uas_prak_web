@@ -26,13 +26,14 @@ class RegisteredUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'nim' => ['nullable', 'string', 'max:20'],
+            'nim' => ['required', 'string', 'max:20', 'unique:users,nim', 'unique:anggotas,nim'],
             'kelas' => ['nullable', 'string', 'max:20'],
             'jurusan' => ['nullable', 'string', 'max:50'],
             'no_hp' => ['nullable', 'string', 'max:15'],
             'alamat' => ['nullable', 'string'],
         ]);
 
+        // 1. Simpan ke tabel users (untuk kebutuhan login auth)
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -45,17 +46,15 @@ class RegisteredUserController extends Controller
             'alamat' => $request->alamat,
         ]);
 
-        // Hanya buat di tabel anggotas jika nim diisi
-        if ($request->filled('nim')) {
-            Anggota::create([
-                'nama_anggota' => $request->name,
-                'nim' => $request->nim,
-                'kelas' => $request->kelas ?? '',
-                'jurusan' => $request->jurusan ?? '',
-                'no_hp' => $request->no_hp ?? '',
-                'alamat' => $request->alamat ?? '',
-            ]);
-        }
+        // 2. Otomatis sinkronisasi buat data di tabel anggotas
+        Anggota::create([
+            'nama_anggota' => $request->name,
+            'nim' => $request->nim,
+            'kelas' => $request->kelas ?? '',
+            'jurusan' => $request->jurusan ?? '',
+            'no_hp' => $request->no_hp ?? '',
+            'alamat' => $request->alamat ?? '',
+        ]);
 
         event(new Registered($user));
 

@@ -151,8 +151,8 @@
                 
                 <!-- MENU UNTUK ANGGOTA SAJA -->
                 @if(auth()->user()->role == 'anggota')
-                    <a class="nav-link" href="{{ route('peminjaman.anggota.create') }}"><i class="fas fa-hand-peace"></i> Ajukan Peminjaman</a>
-                    <a class="nav-link" href="{{ route('peminjaman.anggota.index') }}"><i class="fas fa-history"></i> Riwayat Pengajuan</a>
+                    <a class="nav-link" href="{{ route('anggota.peminjaman.create') }}"><i class="fas fa-hand-peace"></i> Ajukan Peminjaman</a>
+                    <a class="nav-link" href="{{ route('anggota.peminjaman.index') }}"><i class="fas fa-history"></i> Riwayat Pengajuan</a>
                 @endif
                 
                 <hr style="border-color:rgba(255,255,255,0.1); margin:15px;">

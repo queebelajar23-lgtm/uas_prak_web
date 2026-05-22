@@ -179,8 +179,8 @@
                     </div>
                     <div class="info-item">
                         <div class="info-label"><i class="fas fa-calendar me-1"></i> Bergabung Sejak</div>
-                        <p class="info-value">{{ auth()->user()->created_at->format('d M Y') }}</p>
-                    </div>
+                        <p class="info-value">{{ auth()->user()->created_at ?->format('d M Y') ?? 'Tanggal tidak tersedia' }}</p>
+                        </div>
                     @if(auth()->user()->role == 'anggota')
                     <div class="info-item">
                         <div class="info-label"><i class="fas fa-id-card me-1"></i> NIM</div>
